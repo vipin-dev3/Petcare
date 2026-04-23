@@ -130,7 +130,7 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-// ================= DASHBOARD =================
+// ================== DASHBOARD ==================
 class PetDashboard extends StatefulWidget {
   final VoidCallback toggleTheme;
   final VoidCallback logout;
