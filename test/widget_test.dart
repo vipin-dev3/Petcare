@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:petcare_flutter_pro/main.dart';
+import 'package:petcare_flutter_pro/services/auth_service.dart';
+import 'package:petcare_flutter_pro/services/storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('PetCareApp smoke test renders login', (WidgetTester tester) async {
+    // Provide a standard screen size
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    final auth = AuthService();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(PetCareApp(
+      storageService: storage,
+      authService: auth,
+      initialDarkMode: false,
+    ));
+
+    // Pump a few frames for animations
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify PetCare Pro title and login button are present
+    expect(find.text('PetCare Pro'), findsOneWidget);
+    expect(find.text('Sign In to Dashboard'), findsOneWidget);
+    expect(find.text('Autofill Demo (admin / 1234)'), findsOneWidget);
   });
 }

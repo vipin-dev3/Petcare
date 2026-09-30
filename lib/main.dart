@@ -1,409 +1,268 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dart:html' as html;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/auth_service.dart';
+import 'services/storage_service.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_theme.dart';
+import 'widgets/animated_paw.dart';
+import 'widgets/custom_dialogs.dart';
+import 'widgets/sidebar_navigation.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/pets/pets_screen.dart';
+import 'screens/appointments/appointments_screen.dart';
+import 'screens/services/services_screen.dart';
+import 'screens/wellness/wellness_screen.dart';
 
-void main() {
-  runApp(PetCareApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final storageService = StorageService();
+  await storageService.init();
+
+  final authService = AuthService();
+  await authService.init();
+
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('petcare_dark_mode') ?? false;
+
+  runApp(PetCareApp(
+    storageService: storageService,
+    authService: authService,
+    initialDarkMode: isDarkMode,
+  ));
 }
 
-// ================= MODEL =================
-class Pet {
-  String name;
-  String owner;
-  String type;
-  String age;
-  String? image;
+class PetCareApp extends StatefulWidget {
+  final StorageService storageService;
+  final AuthService authService;
+  final bool initialDarkMode;
 
-  Pet({
-    required this.name,
-    required this.owner,
-    required this.type,
-    required this.age,
-    this.image,
+  const PetCareApp({
+    super.key,
+    required this.storageService,
+    required this.authService,
+    required this.initialDarkMode,
   });
 
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'owner': owner,
-        'type': type,
-        'age': age,
-        'image': image,
-      };
-
-  factory Pet.fromJson(Map<String, dynamic> json) => Pet(
-        name: json['name'],
-        owner: json['owner'],
-        type: json['type'],
-        age: json['age'],
-        image: json['image'],
-      );
-}
-
-// ================= MAIN APP =================
-class PetCareApp extends StatefulWidget {
   @override
   State<PetCareApp> createState() => _PetCareAppState();
 }
 
 class _PetCareAppState extends State<PetCareApp> {
-  bool darkMode = false;
-  bool isLoggedIn = false;
-
-  void login() => setState(() => isLoggedIn = true);
-  void logout() => setState(() => isLoggedIn = false);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: darkMode ? ThemeData.dark() : ThemeData.light(),
-      home: isLoggedIn
-          ? PetDashboard(
-              toggleTheme: () => setState(() => darkMode = !darkMode),
-              logout: logout,
-            )
-          : LoginPage(onLogin: login),
-    );
-  }
-}
-
-// ================= LOGIN PAGE =================
-class LoginPage extends StatelessWidget {
-  final VoidCallback onLogin;
-
-  LoginPage({required this.onLogin});
-
-  final userController = TextEditingController();
-  final passController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Container(
-          width: 350,
-          padding: EdgeInsets.all(30),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(color: Colors.grey.shade300, blurRadius: 10)
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("🐾 PetCare Login",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
-
-              TextField(
-                controller: userController,
-                decoration: InputDecoration(labelText: "Username"),
-              ),
-              TextField(
-                controller: passController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: "Password"),
-              ),
-
-              SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: () {
-                  if (userController.text == "admin" &&
-                      passController.text == "1234") {
-                    onLogin();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Invalid Login")));
-                  }
-                },
-                child: Text("Login"),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ================= DASHBOARD =================
-class PetDashboard extends StatefulWidget {
-  final VoidCallback toggleTheme;
-  final VoidCallback logout;
-
-  PetDashboard({required this.toggleTheme, required this.logout});
-
-  @override
-  State<PetDashboard> createState() => _PetDashboardState();
-}
-
-class _PetDashboardState extends State<PetDashboard> {
-  List<Pet> pets = [];
-  List<Pet> filteredPets = [];
-
-  final nameController = TextEditingController();
-  final ownerController = TextEditingController();
-  final typeController = TextEditingController();
-  final ageController = TextEditingController();
-  final searchController = TextEditingController();
-
-  int? editIndex;
-  String? imageBase64;
+  late bool _isDarkMode;
 
   @override
   void initState() {
     super.initState();
-    loadPets();
+    _isDarkMode = widget.initialDarkMode;
+    widget.authService.addListener(_onAuthChanged);
   }
 
-  // STORAGE
-  Future<void> savePets() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString("pets", jsonEncode(pets.map((e) => e.toJson()).toList()));
+  @override
+  void dispose() {
+    widget.authService.removeListener(_onAuthChanged);
+    super.dispose();
   }
 
-  Future<void> loadPets() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString("pets");
-    if (data != null) {
-      List decoded = jsonDecode(data);
-      pets = decoded.map((e) => Pet.fromJson(e)).toList();
-      filteredPets = pets;
-      setState(() {});
-    }
-  }
-
-  // CRUD OPERATION
-  void savePet() {
-    final pet = Pet(
-      name: nameController.text,
-      owner: ownerController.text,
-      type: typeController.text,
-      age: ageController.text,
-      image: imageBase64,
-    );
-
-    if (editIndex == null) {
-      pets.add(pet);
-    } else {
-      pets[editIndex!] = pet;
-      editIndex = null;
-    }
-
-    clearFields();
-    filterPets("");
-    savePets();
-  }
-
-  void editPet(int index) {
-    final pet = filteredPets[index];
-    nameController.text = pet.name;
-    ownerController.text = pet.owner;
-    typeController.text = pet.type;
-    ageController.text = pet.age;
-    imageBase64 = pet.image;
-    editIndex = pets.indexOf(pet);
-  }
-
-  void deletePet(int index) {
-    pets.remove(filteredPets[index]);
-    filterPets(searchController.text);
-    savePets();
-  }
-
-  void clearFields() {
-    nameController.clear();
-    ownerController.clear();
-    typeController.clear();
-    ageController.clear();
-    imageBase64 = null;
-  }
-
-  void filterPets(String query) {
-    filteredPets = pets
-        .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+  void _onAuthChanged() {
     setState(() {});
   }
 
-  void pickImage() {
-    html.FileUploadInputElement upload = html.FileUploadInputElement();
-    upload.accept = 'image/*';
-    upload.click();
-
-    upload.onChange.listen((event) {
-      final file = upload.files!.first;
-      final reader = html.FileReader();
-
-      reader.readAsDataUrl(file);
-      reader.onLoadEnd.listen((event) {
-        setState(() {
-          imageBase64 = reader.result as String;
-        });
-      });
-    });
+  Future<void> _toggleDarkMode() async {
+    setState(() => _isDarkMode = !_isDarkMode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('petcare_dark_mode', _isDarkMode);
   }
-
-  int countType(String type) =>
-      pets.where((p) => p.type.toLowerCase() == type).length;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("🐾 PetCare Dashboard"),
-        actions: [
-          IconButton(
-              icon: Icon(Icons.dark_mode),
-              onPressed: widget.toggleTheme),
-          IconButton(icon: Icon(Icons.logout), onPressed: widget.logout)
-        ],
-      ),
-      body: Row(
-        children: [
-          // SIDEBAR
-          Container(
-            width: 200,
-            color: Colors.green,
-            child: Column(
-              children: [
-                SizedBox(height: 20),
-                Text("Menu", style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          ),
-
-          // MAIN
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: searchController,
-                    onChanged: filterPets,
-                    decoration: InputDecoration(
-                      hintText: "Search pets...",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-
-                  SizedBox(height: 20),
-
-                  Row(
-                    children: [
-                      stat("Total", pets.length),
-                      stat("Dogs", countType("dog")),
-                      stat("Cats", countType("cat")),
-                    ],
-                  ),
-
-                  SizedBox(height: 20),
-
-                  Expanded(
-                    child: Row(
-                      children: [
-                        // FORM
-                        Expanded(
-                          child: Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(15),
-                              child: Column(
-                                children: [
-                                  input(nameController, "Name"),
-                                  input(ownerController, "Owner"),
-                                  input(typeController, "Type"),
-                                  input(ageController, "Age"),
-
-                                  ElevatedButton(
-                                      onPressed: pickImage,
-                                      child: Text("Upload Image")),
-
-                                  if (imageBase64 != null)
-                                    Image.network(imageBase64!, height: 100),
-
-                                  ElevatedButton(
-                                      onPressed: savePet,
-                                      child: Text("Save Pet")),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(width: 20),
-
-                        // LIST
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: filteredPets.length,
-                            itemBuilder: (context, index) {
-                              final pet = filteredPets[index];
-                              return Card(
-                                child: ListTile(
-                                  leading: pet.image != null
-                                      ? Image.network(pet.image!, width: 50)
-                                      : null,
-                                  title: Text(pet.name),
-                                  subtitle: Text(
-                                      "${pet.owner} | ${pet.type} | ${pet.age}"),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                          icon: Icon(Icons.edit),
-                                          onPressed: () => editPet(index)),
-                                      IconButton(
-                                          icon: Icon(Icons.delete),
-                                          onPressed: () => deletePet(index)),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            ),
-          )
-        ],
-      ),
+    return MaterialApp(
+      title: 'PetCare Pro - Veterinary & Care Management',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      home: widget.authService.isLoggedIn
+          ? MainShell(
+              storage: widget.storageService,
+              authService: widget.authService,
+              isDarkMode: _isDarkMode,
+              onToggleTheme: _toggleDarkMode,
+            )
+          : LoginScreen(authService: widget.authService),
     );
   }
+}
 
-  Widget input(controller, label) => Padding(
-        padding: EdgeInsets.all(8),
-        child: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: label,
-            border: OutlineInputBorder(),
-          ),
-        ),
-      );
+class MainShell extends StatefulWidget {
+  final StorageService storage;
+  final AuthService authService;
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
 
-  Widget stat(String title, int value) => Expanded(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
+  const MainShell({
+    super.key,
+    required this.storage,
+    required this.authService,
+    required this.isDarkMode,
+    required this.onToggleTheme,
+  });
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  int _currentIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  Future<void> _handleAddNewPet() async {
+    final newPet = await CustomDialogs.showAddEditPetDialog(context);
+    if (newPet != null) {
+      await widget.storage.addPet(newPet);
+      setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
               children: [
-                Text(value.toString(),
-                    style:
-                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(title),
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('${newPet.name} was successfully registered!'),
               ],
             ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
           ),
-        ),
-      );
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 850;
+    final isDark = widget.isDarkMode;
+
+    final screens = [
+      DashboardScreen(
+        storage: widget.storage,
+        onNavigateToPets: () => setState(() => _currentIndex = 1),
+        onNavigateToAppointments: () => setState(() => _currentIndex = 2),
+        onNavigateToServices: () => setState(() => _currentIndex = 3),
+        onAddPet: _handleAddNewPet,
+      ),
+      PetsScreen(
+        storage: widget.storage,
+        onAddPet: _handleAddNewPet,
+      ),
+      AppointmentsScreen(
+        storage: widget.storage,
+      ),
+      ServicesScreen(
+        storage: widget.storage,
+      ),
+      WellnessScreen(
+        storage: widget.storage,
+      ),
+    ];
+
+    final titles = [
+      'Dashboard Overview',
+      'Pets Directory',
+      'Appointments',
+      'Clinic Services',
+      'Wellness & Health',
+    ];
+
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: Row(
+                children: [
+                  const AnimatedPawBadge(size: 30, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Text(
+                    titles[_currentIndex],
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+                  onPressed: widget.onToggleTheme,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () => widget.authService.logout(),
+                ),
+              ],
+            ),
+      drawer: isDesktop
+          ? null
+          : Drawer(
+              child: SidebarNavigation(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  setState(() => _currentIndex = index);
+                  Navigator.pop(context);
+                },
+                onAddPet: () {
+                  Navigator.pop(context);
+                  _handleAddNewPet();
+                },
+                onToggleTheme: widget.onToggleTheme,
+                onLogout: () => widget.authService.logout(),
+                isDarkMode: widget.isDarkMode,
+                userName: widget.authService.userName,
+              ),
+            ),
+      body: Row(
+        children: [
+          if (isDesktop)
+            SidebarNavigation(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) => setState(() => _currentIndex = index),
+              onAddPet: _handleAddNewPet,
+              onToggleTheme: widget.onToggleTheme,
+              onLogout: () => widget.authService.logout(),
+              isDarkMode: widget.isDarkMode,
+              userName: widget.authService.userName,
+            ),
+          Expanded(
+            child: Container(
+              color: isDark ? AppColors.darkBg : AppColors.lightBg,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: KeyedSubtree(
+                  key: ValueKey<int>(_currentIndex),
+                  child: screens[_currentIndex],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: isDesktop
+          ? null
+          : NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) => setState(() => _currentIndex = index),
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
+                NavigationDestination(icon: Icon(Icons.pets_outlined), selectedIcon: Icon(Icons.pets), label: 'Pets'),
+                NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Visits'),
+                NavigationDestination(icon: Icon(Icons.medical_services_outlined), selectedIcon: Icon(Icons.medical_services), label: 'Services'),
+                NavigationDestination(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite), label: 'Wellness'),
+              ],
+            ),
+    );
+  }
 }
