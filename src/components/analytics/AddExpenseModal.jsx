@@ -41,13 +41,14 @@ export const AddExpenseModal = ({ isOpen, onClose }) => {
 
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">
-            Amount (USD $) <span className="text-rose-500">*</span>
+            Amount (INR ₹) <span className="text-rose-500">*</span>
           </label>
           <input
             type="number"
-            step="0.5"
+            step="1"
+            min="1"
             required
-            placeholder="e.g. 45.00"
+            placeholder="e.g. 1500"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"

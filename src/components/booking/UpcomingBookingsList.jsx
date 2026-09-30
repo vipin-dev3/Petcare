@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { formatINR } from '../../utils/formatCurrency';
 
 export const UpcomingBookingsList = ({ onBookNew }) => {
   const { appointments, cancelAppointment, pets } = usePetContext();
@@ -130,7 +131,7 @@ export const UpcomingBookingsList = ({ onBookNew }) => {
                 <div className="flex items-center gap-3 self-end md:self-center">
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 block font-semibold">Fee</span>
-                    <span className="text-lg font-black text-slate-900">${appt.cost}</span>
+                    <span className="text-lg font-black text-slate-900">{formatINR(appt.cost)}</span>
                   </div>
 
                   {appt.status !== 'Cancelled' ? (

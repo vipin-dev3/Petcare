@@ -10,7 +10,8 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { DollarSign, Plus, PieChart, ShoppingBag, Stethoscope, Scissors, Sparkles } from 'lucide-react';
+import { IndianRupee, Plus, PieChart, ShoppingBag, Stethoscope, Scissors, Sparkles } from 'lucide-react';
+import { formatINR } from '../../utils/formatCurrency';
 import { AddExpenseModal } from './AddExpenseModal';
 
 export const ExpenseVisualizer = () => {
@@ -40,7 +41,7 @@ export const ExpenseVisualizer = () => {
         <div>
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
-              <DollarSign className="w-5 h-5" />
+              <IndianRupee className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">Petcare Expense Visualizer</h3>
@@ -54,7 +55,7 @@ export const ExpenseVisualizer = () => {
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <span className="text-[10px] font-bold uppercase text-slate-400 block">Avg Monthly Spend</span>
-            <span className="text-lg font-black text-slate-900">${avgMonthly}/mo</span>
+            <span className="text-lg font-black text-slate-900">{formatINR(avgMonthly)}/mo</span>
           </div>
 
           <button
@@ -75,7 +76,7 @@ export const ExpenseVisualizer = () => {
             Food & Treats
           </span>
           <span className="text-base font-black text-slate-900 mt-1 block">
-            ${totalsByCategory.food}
+            {formatINR(totalsByCategory.food)}
           </span>
         </div>
 
@@ -85,7 +86,7 @@ export const ExpenseVisualizer = () => {
             Veterinary & Meds
           </span>
           <span className="text-base font-black text-slate-900 mt-1 block">
-            ${totalsByCategory.vet}
+            {formatINR(totalsByCategory.vet)}
           </span>
         </div>
 
@@ -95,7 +96,7 @@ export const ExpenseVisualizer = () => {
             Spa & Grooming
           </span>
           <span className="text-base font-black text-slate-900 mt-1 block">
-            ${totalsByCategory.grooming}
+            {formatINR(totalsByCategory.grooming)}
           </span>
         </div>
 
@@ -105,7 +106,7 @@ export const ExpenseVisualizer = () => {
             Toys & Gear
           </span>
           <span className="text-base font-black text-slate-900 mt-1 block">
-            ${totalsByCategory.accessories}
+            {formatINR(totalsByCategory.accessories)}
           </span>
         </div>
       </div>
@@ -120,7 +121,7 @@ export const ExpenseVisualizer = () => {
               stroke="#94a3b8"
               fontSize={11}
               tickLine={false}
-              tickFormatter={(v) => `$${v}`}
+              tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
             />
             <Tooltip
               content={({ active, payload, label }) => {
@@ -131,13 +132,13 @@ export const ExpenseVisualizer = () => {
                       {payload.map((entry, idx) => (
                         <div key={idx} className="flex justify-between gap-4 text-slate-200">
                           <span className="capitalize">{entry.name}:</span>
-                          <span className="font-bold text-white">${entry.value}</span>
+                          <span className="font-bold text-white">{formatINR(entry.value)}</span>
                         </div>
                       ))}
                       <div className="pt-1.5 border-t border-slate-700 flex justify-between font-black text-emerald-300">
                         <span>Total:</span>
                         <span>
-                          ${payload.reduce((acc, curr) => acc + Number(curr.value || 0), 0)}
+                          {formatINR(payload.reduce((acc, curr) => acc + Number(curr.value || 0), 0))}
                         </span>
                       </div>
                     </div>

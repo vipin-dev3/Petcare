@@ -277,7 +277,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         ),
                       ),
                       Text(
-                        '\$${service.price.toStringAsFixed(0)}',
+                        '₹${service.price.toStringAsFixed(0)}',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,

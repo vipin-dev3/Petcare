@@ -18,6 +18,7 @@ import {
   Star,
   MapPin
 } from 'lucide-react';
+import { formatINR } from '../../utils/formatCurrency';
 import { UpcomingBookingsList } from './UpcomingBookingsList';
 
 export const AppointmentBookingWizard = () => {
@@ -187,7 +188,7 @@ export const AppointmentBookingWizard = () => {
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-400">Duration: {svc.duration}</span>
-                        <span className="text-lg font-black text-slate-900">${svc.price}</span>
+                        <span className="text-lg font-black text-slate-900">{formatINR(svc.price)}</span>
                       </div>
                     </div>
                   );
@@ -381,7 +382,7 @@ export const AppointmentBookingWizard = () => {
                   </div>
                   <div className="text-right">
                     <span className="text-[11px] text-slate-400 block font-semibold">Total Estimated Fee</span>
-                    <span className="text-2xl font-black text-emerald-700">${selectedService.price}</span>
+                    <span className="text-2xl font-black text-emerald-700">{formatINR(selectedService.price)}</span>
                   </div>
                 </div>
 

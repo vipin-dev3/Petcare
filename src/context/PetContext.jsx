@@ -181,7 +181,7 @@ export const PetProvider = ({ children }) => {
     setExpenses((prev) => ({
       ...prev,
       [newPet.id]: [
-        { month: 'Current', food: 50, vet: 40, grooming: 30, accessories: 25, total: 145 },
+        { month: 'Current', food: 3500, vet: 1500, grooming: 1200, accessories: 800, total: 7000 },
       ],
     }));
 
@@ -291,7 +291,7 @@ export const PetProvider = ({ children }) => {
       });
       return { ...prev, [petId]: updated };
     });
-    showToast(`Expense of $${amount} added to ${category}!`);
+    showToast(`Expense of ₹${Number(amount).toLocaleString('en-IN')} added to ${category}!`);
   };
 
   const addAppointment = (apptData) => {

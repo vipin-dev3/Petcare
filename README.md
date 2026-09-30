@@ -190,21 +190,18 @@ Because **PetPulse** is a fully client-side single-page application with LocalSt
    ```
    *(Or link your GitHub repo on [Netlify](https://www.netlify.com); set Build command to `npm run build` and Publish directory to `dist`)*.
 
-### Option C: Deploy to GitHub Pages
-1. Install `gh-pages`:
-   ```bash
-   npm install -D gh-pages
+### Option C: Deploy to GitHub Pages (Automated via GitHub Actions)
+This repository includes an automated CI/CD workflow (`.github/workflows/deploy.yml`) that builds and deploys PetPulse directly to GitHub Pages on every push to `main`.
+
+**To activate GitHub Pages:**
+1. Go to your repository on GitHub: **`https://github.com/vipin-dev3/Petcare`**
+2. Click on **Settings** (top navigation tab).
+3. In the left sidebar, click on **Pages** (under the "Code and automation" section).
+4. Under **Build and deployment > Source**, select:
+   👉 **`GitHub Actions`** (instead of "Deploy from a branch").
+5. That's it! GitHub Actions will trigger automatically, build the static Vite bundle, and deploy to:
    ```
-2. In `vite.config.js`, set `base: '/Petcare/'` (matching your repo name).
-3. In `package.json`, add:
-   ```json
-   "scripts": {
-     "deploy": "vite build && gh-pages -d dist"
-   }
-   ```
-4. Run:
-   ```bash
-   npm run deploy
+   https://vipin-dev3.github.io/Petcare/
    ```
 
 ---
